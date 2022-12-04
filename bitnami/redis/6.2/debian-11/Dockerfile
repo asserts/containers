@@ -1,3 +1,5 @@
+FROM redislabs/redisgraph:2.8.20 AS graphmodule
+FROM redislabs/redisearch:2.4.16 AS searchmodule
 FROM docker.io/bitnami/minideb:bullseye
 
 ARG TARGETARCH
@@ -18,7 +20,7 @@ ENV HOME="/" \
 COPY prebuildfs /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Install required system packages and dependencies
-RUN install_packages ca-certificates curl libssl1.1 procps
+RUN install_packages ca-certificates curl libssl1.1 procps libgomp1
 RUN mkdir -p /tmp/bitnami/pkg/cache/ && cd /tmp/bitnami/pkg/cache/ && \
     COMPONENTS=( \
       "wait-for-port-1.0.5-1-linux-${OS_ARCH}-debian-11" \
@@ -46,6 +48,10 @@ RUN /opt/bitnami/scripts/redis/postunpack.sh
 ENV APP_VERSION="6.2.7" \
     BITNAMI_APP_NAME="redis" \
     PATH="/opt/bitnami/common/bin:/opt/bitnami/redis/bin:$PATH"
+
+RUN mkdir /opt/bitnami/redis/modules
+COPY --from=graphmodule /usr/lib/redis/modules/redisgraph.so* /opt/bitnami/redis/modules
+COPY --from=searchmodule /usr/lib/redis/modules/redisearch.so* /opt/bitnami/redis/modules
 
 EXPOSE 6379
 
